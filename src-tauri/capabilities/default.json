@@ -25,7 +25,20 @@
     "fs:default",
     "fs:read-all",
     {
-      "identifier":"fs:allow-exists"
+      "identifier":"fs:read-files",
+      "allow": [{"path": "$HOME/.caughtin4k/**"}]
+    },
+    {
+      "identifier":"fs:read-dirs",
+      "allow": [{"path": "$HOME/.caughtin4k/**"}]
+    },
+    {
+      "identifier":"fs:write-files",
+      "allow": [{"path": "$HOME/.caughtin4k/**"}]
+    },
+    {
+      "identifier":"fs:allow-create",
+      "allow": [{"path": "$HOME/.caughtin4k/**"}]
     }
   ]
 }

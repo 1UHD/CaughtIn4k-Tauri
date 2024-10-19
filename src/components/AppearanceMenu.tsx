@@ -1,5 +1,9 @@
-import { useState } from "react";
-import { testFunc } from "../functional/configSaving2";
+import { useEffect, useState } from "react";
+import {
+    createTheme,
+    getAllThemes,
+    testFunc,
+} from "../functional/configSaving2";
 
 //TODO: add system fonts & fonts folder (so basically everything :/)
 //TODO: add config save for colors
@@ -592,7 +596,8 @@ function Theme({
     return (
         <div
             className="menu-appearance-themes-selection-theme"
-            onClick={toggleTheme}>
+            onClick={toggleTheme}
+            key={name}>
             <h1>{name}</h1>
             <p>By: {author}</p>
             <div className="menu-appearance-themes-selection-theme-preview">
@@ -624,6 +629,11 @@ function Theme({
 
 function ThemeAppearance() {
     const [currentTheme, setCurrentTheme] = useState("Default");
+    const [themes, setThemes] = useState<ThemeProperties[]>([]);
+
+    useEffect(() => {
+        syncThemes();
+    });
 
     let themeCardVisibility = false;
     const toggleCreateThemeMenu = () => {
@@ -644,63 +654,74 @@ function ThemeAppearance() {
         }
     };
 
-    let themes: ThemeProperties[] = [
-        {
-            name: "Default",
-            author: "CaughtIn4k",
-            textColor: "#d4d4d4",
-            headerColor: "#ffffff",
-            bodyColor: "#353535",
-            stripesColor: "#2c2c2c",
-            menuColor: "#2c2c2c",
-            titlebarColor: "#242424",
-            selectColor: "#4b8eff",
-            setTheme: setCurrentTheme,
-        },
-        {
-            name: "Catpuccin Mocha",
-            author: "Willi",
-            textColor: "#cdd6f4",
-            headerColor: "#bac2de",
-            bodyColor: "#1e1e2e",
-            stripesColor: "#45475a",
-            menuColor: "#181825",
-            titlebarColor: "#11111b",
-            selectColor: "#89b4fa",
-            setTheme: setCurrentTheme,
-        },
-    ];
+    const rgbaToHex = (rgba: string) => {
+        const match = rgba.match(/^rgba\((\d+),\s*(\d+),\s*(\d+),\s*\d+\)$/);
+        if (!match) {
+            throw new Error(`Invalid RGBA string: ${rgba}`);
+        }
+        const [r, g, b] = match.slice(1).map(Number);
+        return `#${r.toString(16).padStart(2, "0")}${g
+            .toString(16)
+            .padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+    };
 
     const saveTheme = () => {
         const themeName = document.getElementById(
             "menu-appearance-themes-createmenu-name"
-        );
+        ) as HTMLInputElement;
 
         const themeAuthor = document.getElementById(
             "menu-appearance-themes-createmenu-author"
-        );
+        ) as HTMLInputElement;
 
         if (!themeName || !themeAuthor) return;
 
         if (themeName.value === "" || themeAuthor.value === "") return;
 
-        let name = themeName.value;
-        let author = themeAuthor.value;
-        let textColor = getVal("--text-color");
-        let headerColor = getVal("--header-color");
-        let bodyColor = getVal("--body-color");
-        let stripesColor = getVal("--table-stripes-color");
-        let titlebarColor = getVal("--titlebar-color");
-        let selectColor = getVal("--select-color");
+        const name = themeName.value;
+        const author = themeAuthor.value;
+        const textColor = getVal("--text-color");
+        const headerColor = getVal("--header-color");
+        const bodyColor = rgbaToHex(getVal("--body-color"));
+        const stripesColor = rgbaToHex(getVal("--table-stripes-color"));
+        const menuColor = getVal("--menu-color");
+        const titlebarColor = getVal("--titlebar-color");
+        const selectColor = getVal("--select-color");
+
+        const theme = {
+            name: name,
+            author: author,
+            textColor: textColor,
+            headerColor: headerColor,
+            bodyColor: bodyColor,
+            stripesColor: stripesColor,
+            menuColor: menuColor,
+            titlebarColor: titlebarColor,
+            selectColor: selectColor,
+        };
+
+        createTheme(theme);
+        syncThemes();
+    };
+
+    const syncThemes = async () => {
+        const fetched_themes = await getAllThemes(setCurrentTheme);
+
+        setThemes((currentThemes) => {
+            return [
+                ...currentThemes,
+                ...fetched_themes.filter(
+                    (theme) => !currentThemes.find((t) => t.name === theme.name)
+                ),
+            ];
+        });
     };
 
     return (
         <div className="menu-appearance-themes">
             <h1 id="menu-appearance-themes-header">THEMES</h1>
             <p>Current Theme: {currentTheme}</p>
-            <p
-                onClick={testFunc}
-                id="menu-appearance-themes-themesfolderbutton">
+            <p id="menu-appearance-themes-themesfolderbutton">
                 Open Themes folder
             </p>
             <p
