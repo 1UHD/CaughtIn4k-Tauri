@@ -17,6 +17,11 @@ fn reset_theme(app_handle: tauri::AppHandle) {
 }
 
 #[tauri::command]
+fn set_transparency(app_handle: tauri::AppHandle, transparency: String) {
+    app_handle.emit("set-transparency", transparency).unwrap();
+}
+
+#[tauri::command]
 fn add_player(app_handle: tauri::AppHandle, name: String) {
     app_handle.emit("add-player", name).unwrap();
 }
@@ -43,7 +48,8 @@ pub fn run() {
             clear_players,
             set_mojang_status,
             set_hypixel_status,
-            reset_theme
+            reset_theme,
+            set_transparency
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -4,11 +4,12 @@ import {
     getAllThemes,
     getCurrentTheme,
     getTheme,
+    openThemeFolder,
     setCurrentTheme,
-} from "../functional/configSaving2";
+    setCurrentTransparency,
+} from "../functional/configSaving";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { setTheme } from "@tauri-apps/api/app";
 
 //TODO: add system fonts & fonts folder (so basically everything :/)
 //TODO: add config save for colors
@@ -229,8 +230,56 @@ function InterfaceAppearance() {
             setTransparencyValue(100);
         });
 
+        const unlistenSetTransparency = listen<any>(
+            "set-transparency",
+            (event) => {
+                let transparency = parseInt(event.payload);
+
+                let bodyColors = hexToRgb(
+                    getComputedStyle(document.body).getPropertyValue(
+                        "--no-alpha-body-color"
+                    )
+                );
+                let tableStripesColors = hexToRgb(
+                    getComputedStyle(document.body).getPropertyValue(
+                        "--no-alpha-table-stripes-color"
+                    )
+                );
+
+                if (!bodyColors || !tableStripesColors) {
+                    return;
+                }
+
+                document.documentElement.style.setProperty(
+                    "--body-color",
+                    `rgba(${bodyColors[0]}, ${bodyColors[1]}, ${
+                        bodyColors[2]
+                    }, ${transparency / 100})`
+                );
+
+                console.log(getVal("--body-color"));
+
+                document.documentElement.style.setProperty(
+                    "--table-stripes-color",
+                    `rgba(${tableStripesColors[0]}, ${tableStripesColors[1]}, ${
+                        tableStripesColors[2]
+                    }, ${transparency / 100})`
+                );
+
+                document.documentElement.style.setProperty(
+                    "--saved-table-stripes-color",
+                    `rgba(${tableStripesColors[0]}, ${tableStripesColors[1]}, ${
+                        tableStripesColors[2]
+                    }, ${transparency / 100})`
+                );
+
+                setTransparencyValue(transparency);
+            }
+        );
+
         return () => {
             unlistenResetTheme.then((unlisten) => unlisten());
+            unlistenSetTransparency.then((unlisten) => unlisten());
         };
     }, []);
 
@@ -300,6 +349,7 @@ function InterfaceAppearance() {
         );
 
         setTransparencyValue(event.target.value);
+        setCurrentTransparency(event.target.value);
     };
 
     const onBodyChange = (event: any) => {
@@ -693,9 +743,11 @@ function ThemeAppearance() {
     useEffect(() => {
         syncThemes();
         getCurrentTheme().then((rep) => {
-            const t = rep.replace(" ", "_");
+            const t = rep[0].replace(" ", "_");
+            const tp = rep[1];
             getTheme(`${t}.json`, setCurrentTheme).then((resp) => {
                 toggleTheme(resp);
+                invoke("set_transparency", { transparency: tp });
             });
         });
     }, []);
@@ -788,11 +840,17 @@ function ThemeAppearance() {
         });
     };
 
+    const openThemesFolder = () => {
+        openThemeFolder();
+    };
+
     return (
         <div className="menu-appearance-themes">
             <h1 id="menu-appearance-themes-header">THEMES</h1>
             <p>Current Theme: {currentTheme}</p>
-            <p id="menu-appearance-themes-themesfolderbutton">
+            <p
+                onClick={openThemesFolder}
+                id="menu-appearance-themes-themesfolderbutton">
                 Open Themes folder
             </p>
             <p

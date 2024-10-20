@@ -49,7 +49,24 @@ const onClickAppearance = () => {
         buttons[0].toggled = true;
     }
 };
-const onClickKeyboard = () => {};
+const onClickKeyboard = () => {
+    const keyboardMenu = document.querySelector<HTMLElement>(".menu-keyboard");
+
+    if (!keyboardMenu) {
+        return;
+    }
+
+    if (buttons[1].toggled) {
+        keyboardMenu.style.right = "calc(-100vw + 200px)";
+        buttons[1].toggled = false;
+    } else {
+        closeOthers("Keyboard");
+        keyboardMenu.style.right = "0";
+        buttons[1].toggled = true;
+    }
+};
+
+const onClickGeneral = () => {};
 
 let buttons = [
     {
@@ -62,6 +79,12 @@ let buttons = [
         name: "Keyboard",
         logo: "./keyboard_logo.png",
         onClick: onClickKeyboard,
+        toggled: false,
+    },
+    {
+        name: "General",
+        logo: "./general_settings_logo.png",
+        onClick: onClickGeneral,
         toggled: false,
     },
 ];

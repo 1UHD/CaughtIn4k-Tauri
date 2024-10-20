@@ -27,6 +27,8 @@ function Session() {
         invoke("clear_players");
     };
 
+    const refetchPlayers = () => {};
+
     const removePlayer = (event: any) => {
         if (event.key === "Enter") {
             invoke("remove_player", { name: event.target.value });
@@ -37,6 +39,11 @@ function Session() {
         <div className="sidebar-session">
             <h1 onClick={toggleVisibility}>SESSION</h1>
             <div className="sidebar-session-controls">
+                <p
+                    id="sidebar-session-controls-refetch"
+                    onClick={refetchPlayers}>
+                    Refetch players
+                </p>
                 <p id="sidebar-session-controls-clear" onClick={clearPlayers}>
                     Clear players
                 </p>

@@ -1,79 +1,127 @@
+import * as path from "@tauri-apps/api/path";
+import {
+    exists,
+    mkdir,
+    readDir,
+    readTextFile,
+    writeTextFile,
+} from "@tauri-apps/plugin-fs";
 import { ThemeProperties } from "../components/AppearanceMenu";
+import { app } from "@tauri-apps/api";
+import { open } from "@tauri-apps/plugin-shell";
 
-const userDirectory = os.homedir();
-const appFolder = path.join(userDirectory, ".caughtin4k");
-const themesFolder = path.join(appFolder, "themes");
-const fontsFolder = path.join(appFolder, "fonts");
-const configFolder = path.join(appFolder, "config");
+const homedir = await path.homeDir();
+const appPath = await path.join(homedir, "/.caughtin4k");
+const configPath = await path.join(homedir, "/.caughtin4k/config");
+const fontsPath = await path.join(homedir, "/.caughtin4k/fonts");
+const themesPath = await path.join(homedir, "/.caughtin4k/themes");
 
-export function createConfigFile() {
-    if (!fs.existsSync(appFolder)) {
-        fs.mkdirSync(appFolder);
-    }
-    if (!fs.existsSync(themesFolder)) {
-        fs.mkdirSync(themesFolder);
-    }
-    if (!fs.existsSync(fontsFolder)) {
-        fs.mkdirSync(fontsFolder);
-    }
-    if (!fs.existsSync(configFolder)) {
-        fs.mkdirSync(configFolder);
-    }
+export async function createConfigFile() {
+    const dotfileExists = await exists(appPath);
+    const configPathExists = await exists(configPath);
+    const fontsPathExists = await exists(fontsPath);
+    const themesPathExists = await exists(themesPath);
+
+    if (!dotfileExists) {
+        await mkdir(appPath);
+    } else console.log("1");
+
+    if (!configPathExists) {
+        await mkdir(configPath);
+    } else console.log("2");
+
+    if (!fontsPathExists) {
+        await mkdir(fontsPath);
+    } else console.log("3");
+
+    if (!themesPathExists) {
+        await mkdir(themesPath);
+    } else console.log("4");
 }
 
-export function editConfigProperty(
-    file: string,
-    JSONValue: string,
-    value: string
-) {
-    if (!file) {
-        console.log("File not found");
-        return;
-    }
-
-    const data = fs.readFileSync(file, "utf8");
-    let jsonData = JSON.parse(data);
-    jsonData[JSONValue] = value;
-    fs.writeFileSync(file, JSON.stringify(jsonData));
+export async function createTheme(theme: any) {
+    const name = theme.name.replace(" ", "_");
+    const themeJSON = JSON.stringify(theme);
+    await writeTextFile(`${themesPath}/${name}.json`, themeJSON);
 }
 
-export function getConfigProperty(file: string, JSONvalue: string) {
-    if (!file) {
-        console.log("File not found.");
-        return;
-    }
+export async function getTheme(themeName: any, setTheme: any) {
+    const themeText = await readTextFile(
+        await path.join(themesPath, themeName)
+    );
+    let themeJSON: ThemeProperties = JSON.parse(themeText);
+    themeJSON.setTheme = setTheme;
 
-    const data = fs.readFileSync(file, "utf8");
-    const jsonData = JSON.parse(data);
-
-    return jsonData[JSONvalue];
+    return themeJSON;
 }
 
-export function getThemes() {
+export async function openThemeFolder() {
+    await open(themesPath);
+}
+
+export async function getAllThemes(setTheme: any) {
+    const themesDir = await readDir(themesPath);
     let themes: ThemeProperties[] = [];
 
-    fs.readdir(themesFolder, (err, files) => {
-        files.forEach((file) => {
-            let data = fs.readFileSync(file, "utf8");
-            let dataJSON = JSON.parse(data);
-            let themeJSON: ThemeProperties = { ...dataJSON };
-            themeJSON.setTheme = "placeholder";
+    for (const theme of themesDir) {
+        if (!theme.name.includes(".json") || theme.name === "tc.json") continue;
 
-            console.log(themeJSON);
-        });
-    });
+        const themeJSON = await getTheme(theme.name, setTheme);
+        themes.push(themeJSON);
+    }
+
+    return themes;
 }
 
-export function saveTheme({
-    name,
-    author,
-    textColor,
-    headerColor,
-    bodyColor,
-    stripesColor,
-    menuColor,
-    titlebarColor,
-    selectColor,
-}: ThemeProperties) {
-    console.log(name);
+export async function getCurrentTheme() {
+    try {
+        const stringifiedJSON = await readTextFile(
+            await path.join(themesPath, "tc.json")
+        );
+        const json = JSON.parse(stringifiedJSON);
+        const selected = json.selectedTheme;
+        const transparency = json.currentTransparency;
+        return [selected, transparency];
+    } catch (e) {
+        return ["Default", 100];
+    }
+}
+
+export async function setCurrentTheme(currentTheme: string) {
+    const stringifiedJSON1 = await readTextFile(
+        //what the actual fuck is this god awful naming scheme???
+        await path.join(themesPath, "tc.json")
+    );
+
+    const json1 = JSON.parse(stringifiedJSON1);
+
+    let json = {
+        selectedTheme: currentTheme,
+        currentTransparency: json1.currentTransparency,
+    };
+    const stringifiedJSON = JSON.stringify(json);
+    await writeTextFile(
+        await path.join(themesPath, "tc.json"),
+        stringifiedJSON
+    );
+}
+
+export async function setCurrentTransparency(currentTransparency: string) {
+    const stringifiedJSON1 = await readTextFile(
+        //what the actual fuck is this god awful naming scheme???
+        // ^ this comment exists twice because I copied the code
+        await path.join(themesPath, "tc.json")
+    );
+
+    const json1 = JSON.parse(stringifiedJSON1);
+
+    let json = {
+        selectedTheme: json1.selectedTheme,
+        currentTransparency: currentTransparency,
+    };
+    const stringifiedJSON = JSON.stringify(json);
+    await writeTextFile(
+        await path.join(themesPath, "tc.json"),
+        stringifiedJSON
+    );
 }
