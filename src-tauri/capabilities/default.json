@@ -39,6 +39,10 @@
     {
       "identifier":"fs:allow-create",
       "allow": [{"path": "$HOME/.caughtin4k/**"}]
+    },
+    {
+      "identifier":"fs:allow-mkdir",
+      "allow": [{"path": "$HOME/**"}]
     }
   ]
 }

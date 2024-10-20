@@ -20,10 +20,6 @@ export async function createConfigFile() {
     const themesPathExists = await exists(themesPath);
 }
 
-export async function testFunc(setTheme: any) {
-    getAllThemes(setTheme);
-}
-
 export async function createTheme(theme: any) {
     const name = theme.name.replace(" ", "_");
     const themeJSON = JSON.stringify(theme);
@@ -45,11 +41,35 @@ export async function getAllThemes(setTheme: any) {
     let themes: ThemeProperties[] = [];
 
     for (const theme of themesDir) {
-        if (!theme.name.includes(".json")) continue;
+        if (!theme.name.includes(".json") || theme.name === "tc.json") continue;
 
         const themeJSON = await getTheme(theme.name, setTheme);
         themes.push(themeJSON);
     }
 
     return themes;
+}
+
+export async function getCurrentTheme() {
+    try {
+        const stringifiedJSON = await readTextFile(
+            await path.join(themesPath, "tc.json")
+        );
+        const json = JSON.parse(stringifiedJSON);
+        const selected = json.selectedTheme;
+        return selected;
+    } catch (e) {
+        return "Default";
+    }
+}
+
+export async function setCurrentTheme(currentTheme: string) {
+    let json = {
+        selectedTheme: currentTheme,
+    };
+    const stringifiedJSON = JSON.stringify(json);
+    await writeTextFile(
+        await path.join(themesPath, "tc.json"),
+        stringifiedJSON
+    );
 }

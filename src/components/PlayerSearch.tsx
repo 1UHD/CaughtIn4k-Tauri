@@ -5,7 +5,6 @@ function PlayerSearch() {
 
     const searchPlayer = (event: any) => {
         if (event.key === "Enter") {
-            console.log(event.target.value);
             invoke("add_player", { name: event.target.value });
         }
     };

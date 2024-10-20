@@ -12,6 +12,11 @@ fn set_hypixel_status(app_handle: tauri::AppHandle, status: String) {
 }
 
 #[tauri::command]
+fn reset_theme(app_handle: tauri::AppHandle) {
+    app_handle.emit("reset-theme", ()).unwrap();
+}
+
+#[tauri::command]
 fn add_player(app_handle: tauri::AppHandle, name: String) {
     app_handle.emit("add-player", name).unwrap();
 }
@@ -37,7 +42,8 @@ pub fn run() {
             remove_player,
             clear_players,
             set_mojang_status,
-            set_hypixel_status
+            set_hypixel_status,
+            reset_theme
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

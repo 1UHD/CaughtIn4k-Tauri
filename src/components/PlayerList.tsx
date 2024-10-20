@@ -123,7 +123,6 @@ function PlayerList() {
                 const playerExists = await checkIfPlayerAlreadyInList(
                     playerName
                 );
-                console.log(playerExists);
 
                 if (playerExists) {
                     return;

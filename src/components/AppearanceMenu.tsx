@@ -2,8 +2,13 @@ import { useEffect, useState } from "react";
 import {
     createTheme,
     getAllThemes,
-    testFunc,
+    getCurrentTheme,
+    getTheme,
+    setCurrentTheme,
 } from "../functional/configSaving2";
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
+import { setTheme } from "@tauri-apps/api/app";
 
 //TODO: add system fonts & fonts folder (so basically everything :/)
 //TODO: add config save for colors
@@ -65,6 +70,17 @@ function StatsAppearance() {
 }
 
 function FontsAppearance() {
+    useEffect(() => {
+        const unlistenResetTheme = listen<string>("reset-theme", () => {
+            resetHeaderColor();
+            resetTextColor();
+        });
+
+        return () => {
+            unlistenResetTheme.then((unlisten) => unlisten());
+        };
+    }, []);
+
     let fontsVisibility = false;
 
     const [activeFont, setActiveFont] = useState("Minecraft");
@@ -203,6 +219,21 @@ function FontsAppearance() {
 }
 
 function InterfaceAppearance() {
+    useEffect(() => {
+        const unlistenResetTheme = listen<string>("reset-theme", () => {
+            resetBody();
+            resetMenu();
+            resetSelect();
+            resetStripes();
+            resetTitlebar();
+            setTransparencyValue(100);
+        });
+
+        return () => {
+            unlistenResetTheme.then((unlisten) => unlisten());
+        };
+    }, []);
+
     const [transparencyValue, setTransparencyValue] = useState(100);
 
     const [bodyColor, setBodyColor] = useState(
@@ -545,6 +576,55 @@ export interface ThemeProperties {
     setTheme: any;
 }
 
+const toggleTheme = ({
+    name,
+    textColor,
+    headerColor,
+    bodyColor,
+    stripesColor,
+    menuColor,
+    titlebarColor,
+    selectColor,
+    setTheme,
+}: ThemeProperties) => {
+    setTheme(name);
+    setCurrentTheme(name);
+
+    const bodyRGB = hexToRgb(bodyColor);
+    const stripesRGB = hexToRgb(stripesColor);
+
+    if (!bodyRGB || !stripesRGB) return;
+
+    const bodyRGBA = `rgba(${bodyRGB[0]}, ${bodyRGB[1]}, ${bodyRGB[2]}, 100)`;
+    const stripesRGBA = `rgba(${stripesRGB[0]}, ${stripesRGB[1]}, ${stripesRGB[2]}, 100)`;
+
+    setVal("--default-no-alpha-body-color", bodyColor);
+    setVal("--default-no-alpha-table-stripes-color", stripesColor);
+    setVal("--default-no-alpha-saved-table-stripes-color", stripesColor);
+    setVal("--default-body-color", bodyRGBA);
+    setVal("--default-table-stripes-color", stripesRGBA);
+    setVal("--default-menu-color", menuColor);
+    setVal("--default-titlebar-color", titlebarColor);
+    setVal("--default-saved-table-stripes-color", stripesRGBA);
+    setVal("--default-select-color", selectColor);
+    setVal("--default-text-color", textColor);
+    setVal("--default-header-color", headerColor);
+
+    setVal("--no-alpha-body-color", bodyColor);
+    setVal("--no-alpha-table-stripes-color", stripesColor);
+    setVal("--no-alpha-saved-table-stripes-color", stripesColor);
+    setVal("--body-color", bodyRGBA);
+    setVal("--table-stripes-color", stripesRGBA);
+    setVal("--menu-color", menuColor);
+    setVal("--titlebar-color", titlebarColor);
+    setVal("--saved-table-stripes-color", stripesRGBA);
+    setVal("--select-color", selectColor);
+    setVal("--text-color", textColor);
+    setVal("--header-color", headerColor);
+
+    invoke("reset_theme");
+};
+
 function Theme({
     name,
     author,
@@ -557,46 +637,25 @@ function Theme({
     selectColor,
     setTheme,
 }: ThemeProperties) {
-    const toggleTheme = () => {
-        setTheme(name);
-
-        const bodyRGB = hexToRgb(bodyColor);
-        const stripesRGB = hexToRgb(stripesColor);
-
-        if (!bodyRGB || !stripesRGB) return;
-
-        const bodyRGBA = `rgba(${bodyRGB[0]}, ${bodyRGB[1]}, ${bodyRGB[2]}, 100)`;
-        const stripesRGBA = `rgba(${stripesRGB[0]}, ${stripesRGB[1]}, ${stripesRGB[2]}, 100)`;
-
-        setVal("--default-no-alpha-body-color", bodyColor);
-        setVal("--default-no-alpha-table-stripes-color", stripesColor);
-        setVal("--default-no-alpha-saved-table-stripes-color", stripesColor);
-        setVal("--default-body-color", bodyRGBA);
-        setVal("--default-table-stripes-color", stripesRGBA);
-        setVal("--default-menu-color", menuColor);
-        setVal("--default-titlebar-color", titlebarColor);
-        setVal("--default-saved-table-stripes-color", stripesRGBA);
-        setVal("--default-select-color", selectColor);
-        setVal("--default-text-color", textColor);
-        setVal("--default-header-color", headerColor);
-
-        setVal("--no-alpha-body-color", bodyColor);
-        setVal("--no-alpha-table-stripes-color", stripesColor);
-        setVal("--no-alpha-saved-table-stripes-color", stripesColor);
-        setVal("--body-color", bodyRGBA);
-        setVal("--table-stripes-color", stripesRGBA);
-        setVal("--menu-color", menuColor);
-        setVal("--titlebar-color", titlebarColor);
-        setVal("--saved-table-stripes-color", stripesRGBA);
-        setVal("--select-color", selectColor);
-        setVal("--text-color", textColor);
-        setVal("--header-color", headerColor);
+    const activateTheme = () => {
+        toggleTheme({
+            name,
+            author,
+            textColor,
+            headerColor,
+            bodyColor,
+            stripesColor,
+            menuColor,
+            titlebarColor,
+            selectColor,
+            setTheme,
+        });
     };
 
     return (
         <div
             className="menu-appearance-themes-selection-theme"
-            onClick={toggleTheme}
+            onClick={activateTheme}
             key={name}>
             <h1>{name}</h1>
             <p>By: {author}</p>
@@ -633,7 +692,13 @@ function ThemeAppearance() {
 
     useEffect(() => {
         syncThemes();
-    });
+        getCurrentTheme().then((rep) => {
+            const t = rep.replace(" ", "_");
+            getTheme(`${t}.json`, setCurrentTheme).then((resp) => {
+                toggleTheme(resp);
+            });
+        });
+    }, []);
 
     let themeCardVisibility = false;
     const toggleCreateThemeMenu = () => {
@@ -676,7 +741,13 @@ function ThemeAppearance() {
 
         if (!themeName || !themeAuthor) return;
 
-        if (themeName.value === "" || themeAuthor.value === "") return;
+        if (
+            themeName.value === "" ||
+            themeAuthor.value === "" ||
+            themeName.value.length < 3 ||
+            themeAuthor.value.length < 3
+        )
+            return;
 
         const name = themeName.value;
         const author = themeAuthor.value;
@@ -733,10 +804,12 @@ function ThemeAppearance() {
                 <input
                     type="text"
                     placeholder="Theme name (required)"
+                    maxLength={30}
                     id="menu-appearance-themes-createmenu-name"></input>
                 <input
                     type="text"
                     placeholder="Theme author (required)"
+                    maxLength={30}
                     id="menu-appearance-themes-createmenu-author"></input>
                 <p onClick={saveTheme}>Save Theme</p>
             </div>
